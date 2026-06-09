@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ invoice.invoice_no }}</title>
+  <style>
+    @page { size: A4 portrait; margin: 15mm 14mm 14mm 14mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Calibri, 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #000; }
+
+    /* ── Header ── */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4pt; }
+    .logo-box { width: 68pt; height: 68pt; border: 1pt solid #ccc; background: #eaf4fb;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 8pt; color: #1a5276; font-weight: bold; text-align: center; }
+    .company-block { padding-left: 10pt; flex: 1; }
+    .company-name { font-size: 14pt; font-weight: bold; color: #1a5276; line-height: 1.2; }
+    .tagline { font-size: 8pt; font-style: italic; color: #555; }
+    .address { font-size: 8pt; color: #333; margin-top: 2pt; }
+    .pan { font-size: 8.5pt; font-weight: bold; color: #1a5276; margin-top: 2pt; }
+    .inv-title { font-size: 24pt; font-weight: 900; color: #1a5276; text-align: right; line-height: 1.1; }
+
+    /* ── Divider ── */
+    .divider { border: none; border-top: 2pt solid #1a5276; margin: 5pt 0; }
+    .divider-thin { border: none; border-top: 0.5pt solid #aaa; margin: 4pt 0; }
+
+    /* ── Bill To + Meta ── */
+    .bill-meta { display: flex; gap: 10pt; margin-bottom: 6pt; }
+    .bill-to { flex: 1.1; }
+    .bill-to .label { font-size: 8.5pt; font-weight: bold; color: #1a5276; }
+    .bill-to .client-name { font-size: 9pt; font-weight: bold; color: #1a5276; }
+    .bill-to .info { font-size: 8pt; color: #333; margin-top: 1pt; }
+    .meta-table { flex: 1; font-size: 8pt; }
+    .meta-table table { width: 100%; border-collapse: collapse; }
+    .meta-table td { padding: 1.5pt 2pt; vertical-align: top; }
+    .meta-label { color: #1a5276; font-weight: 500; white-space: nowrap; width: 52%; }
+    .meta-value { color: #333; }
+
+    /* ── Items table ── */
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 0; font-size: 8.5pt; }
+    .items-table th {
+      background: #1a5276; color: #fff; font-weight: 700; font-size: 8pt;
+      padding: 5pt 5pt; border: 0.5pt solid #154360; text-align: center;
+    }
+    .items-table td { border: 0.5pt solid #aaa; padding: 4pt 5pt; vertical-align: middle; }
+    .items-table tbody tr:nth-child(even) { background: #f4faff; }
+
+    /* ── Totals ── */
+    .totals-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    .totals-table td { border: 0.5pt solid #aaa; padding: 4pt 6pt; vertical-align: middle; }
+    .in-words-cell { width: 56%; vertical-align: top; font-size: 8pt; }
+    .total-label { text-align: right; color: #1a5276; font-weight: 600; white-space: nowrap; }
+    .total-val { text-align: right; width: 80pt; }
+    .grand-total-label { background: #1a5276; color: #fff; font-weight: 700; text-align: right; }
+    .grand-total-val { background: #1a5276; color: #fff; font-weight: 700; text-align: right; }
+    .eoe { font-size: 7pt; color: #999; font-style: italic; text-align: right; border: none !important; }
+
+    /* ── Bank + Signature ── */
+    .bottom-section { display: flex; gap: 10pt; margin-top: 4pt; }
+    .bank-block { flex: 1; }
+    .bank-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+    .bank-table th { background: #d6eaf8; color: #1a5276; font-weight: 700; padding: 4pt 6pt;
+                     border: 0.5pt solid #aaa; }
+    .bank-table td { border: 0.5pt solid #aaa; padding: 3pt 6pt; }
+    .bank-label { background: #d6eaf8; color: #1a5276; font-weight: 600; width: 38%; }
+
+    .remarks-block { margin-top: 4pt; border: 0.5pt solid #aaa; padding: 4pt; font-size: 8pt;
+                     min-height: 28pt; }
+    .remarks-title { font-weight: 700; color: #1a5276; background: #d6eaf8;
+                     padding: 3pt 6pt; margin: -4pt -4pt 4pt -4pt; display: block; }
+
+    .sig-block { flex: 0.8; display: flex; flex-direction: column; justify-content: space-between;
+                 text-align: center; border: 0.5pt solid #aaa; padding: 6pt 8pt; font-size: 8pt; }
+    .cert-text { font-size: 7.5pt; font-style: italic; color: #444; }
+    .for-company { font-weight: 700; color: #1a5276; font-size: 8pt; margin-top: 2pt; }
+    .computer-gen { font-size: 9pt; font-style: italic; color: #ccc; margin: 8pt 0; }
+    .auth-sig { color: #1a5276; font-size: 8pt; border-top: 0.5pt solid #aaa;
+                padding-top: 4pt; margin-top: 4pt; }
+
+    /* ── Footer ── */
+    .footer { margin-top: 8pt; border-top: 0.8pt solid #1a5276; padding-top: 4pt;
+              display: flex; justify-content: space-between; font-size: 7.5pt; color: #888; }
+    .footer-email { color: #1a5276; }
+
+    /* Print button (only shown when not PDF) */
+    .print-btn { display: none; }
+    {% if print_mode is defined and print_mode %}
+    @media screen { .print-btn { display: block; position: fixed; top: 18px; right: 18px; z-index: 99; } }
+    @media print  { .print-btn { display: none !important; } }
+    {% endif %}
+  </style>
+</head>
+<body>
+
+{% if print_mode is defined and print_mode %}
+<button class="print-btn btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+{% endif %}
+
+<!-- Header -->
+<div class="header">
+  <div class="logo-box">[LOGO]</div>
+  <div class="company-block">
+    <div class="company-name">MAVERICK INFRA AND ENGINEERS PVT. LTD.</div>
+    <div class="tagline">'Model  •  Innovate  •  Elevate'</div>
+    <div class="address">Pokhara-15, Kaski District, Gandaki Province, Nepal</div>
+    <div class="pan">PAN: 622501XXX</div>
+  </div>
+  <div class="inv-title">TAX<br>INVOICE</div>
+</div>
+
+<hr class="divider">
+
+<!-- Bill To + Metadata -->
+<div class="bill-meta">
+  <div class="bill-to">
+    <div class="label">BILL TO:</div>
+    <div class="client-name">{{ invoice.client.name }}</div>
+    {% if invoice.client.address %}<div class="info">{{ invoice.client.address }}</div>{% endif %}
+    {% if invoice.client.phone %}<div class="info">Phone: {{ invoice.client.phone }}</div>{% endif %}
+    {% if invoice.client.email %}<div class="info">Email: {{ invoice.client.email }}</div>{% endif %}
+    {% if invoice.client.pan %}<div class="info pan">PAN: {{ invoice.client.pan }}</div>{% endif %}
+  </div>
+  <div class="meta-table">
+    <table>
+      {% set meta = [
+        ('Tax Invoice No.', invoice.invoice_no),
+        ('Issue Date', invoice.issue_date.strftime('%Y-%m-%d')),
+        ('Due Date', invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else ''),
+        ('Payment Mode', invoice.payment_mode),
+        ('Reference', invoice.reference),
+      ] %}
+      {% for label, val in meta %}
+      <tr>
+        <td class="meta-label">{{ label }}</td>
+        <td style="width:8pt">:</td>
+        <td class="meta-value">{{ val }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<!-- Items -->
+<table class="items-table">
+  <thead>
+    <tr>
+      <th style="width:28pt">S.NO.</th>
+      <th style="width:56pt">HS CODE</th>
+      <th>DESCRIPTION</th>
+      <th style="width:36pt">QTY</th>
+      <th style="width:36pt">UNIT</th>
+      <th style="width:64pt">RATE</th>
+      <th style="width:70pt">AMOUNT</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in invoice.items %}
+    <tr>
+      <td style="text-align:center">{{ item.sno }}</td>
+      <td style="text-align:center">{{ item.hs_code }}</td>
+      <td>{{ item.description }}</td>
+      <td style="text-align:right">{{ item.qty }}</td>
+      <td style="text-align:center">{{ item.unit }}</td>
+      <td style="text-align:right">{{ "{:,.2f}".format(item.rate) }}</td>
+      <td style="text-align:right">{{ "{:,.2f}".format(item.amount) }}</td>
+    </tr>
+    {% endfor %}
+    {% for _ in range([12 - invoice.items|length, 0]|max) %}
+    <tr><td colspan="7" style="height:14pt"></td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Totals -->
+<table class="totals-table">
+  <tr>
+    <td class="in-words-cell" rowspan="3" style="border:0.5pt solid #aaa">
+      <strong>IN WORDS:</strong><br>
+      <span style="color:#333">{{ in_words }}</span>
+    </td>
+    <td class="total-label">SUBTOTAL :</td>
+    <td class="total-val">{{ "{:,.2f}".format(invoice.subtotal) }}</td>
+  </tr>
+  <tr>
+    <td class="total-label" style="color:#555;font-weight:normal">13% VAT :</td>
+    <td class="total-val">{{ "{:,.2f}".format(invoice.vat) }}</td>
+  </tr>
+  <tr>
+    <td class="grand-total-label">TOTAL AMOUNT :&nbsp;&nbsp;&nbsp;NPR</td>
+    <td class="grand-total-val">{{ "{:,.2f}".format(invoice.total) }}</td>
+  </tr>
+  <tr>
+    <td colspan="3" class="eoe">(E. &amp; E. O.)</td>
+  </tr>
+</table>
+
+<!-- Bank + Signature -->
+<div class="bottom-section">
+  <div class="bank-block">
+    <table class="bank-table">
+      <tr><th colspan="2">BANK DETAILS</th></tr>
+      <tr><td class="bank-label">Account Name:</td><td>MAVERICK INFRA AND ENGINEERS PVT. LTD.</td></tr>
+      <tr><td class="bank-label">Bank Name:</td><td>Machhapuchhre Bank Ltd.</td></tr>
+      <tr><td class="bank-label">Branch:</td><td>Nayabazar, Pokhara</td></tr>
+      <tr><td class="bank-label">Account No.:</td><td>00109943171XXXXX</td></tr>
+    </table>
+    <div class="remarks-block">
+      <span class="remarks-title">REMARKS</span>
+      {{ invoice.notes or '' }}
+    </div>
+  </div>
+
+  <div class="sig-block">
+    <div>
+      <div class="cert-text">Certified that the particulars given above are true and correct.</div>
+      <div class="for-company">FOR MAVERICK INFRA AND ENGINEERS PVT. LTD.</div>
+    </div>
+    <div class="computer-gen">This is a computer generated<br>invoice, no signature required.</div>
+    <div class="auth-sig">Authorized Signatory</div>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <span>
+    MAVERICK INFRA AND ENGINEERS PVT. LTD. &nbsp;|&nbsp;
+    Address: Pokhara-15, Kaski District, Gandaki Province, Nepal &nbsp;|&nbsp;
+    Phone: (977) 98028 58556, 98028 23544 &nbsp;|&nbsp; Web: www.maverickinfra.com.np
+  </span>
+  <span class="footer-email">✉ accounts@maverickinfra.com.np</span>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% block title %}{{ invoice.invoice_no }}{% endblock %}
+{% block page_title %}Invoice {{ invoice.invoice_no }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('invoices.generate_pdf', id=invoice.id) }}" target="_blank"
+   class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-file-pdf me-1"></i>PDF
+</a>
+<a href="{{ url_for('invoices.edit', id=invoice.id) }}" class="btn btn-sm btn-teal">
+  <i class="bi bi-pencil me-1"></i>Edit
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <!-- Invoice preview card -->
+  <div class="col-lg-8">
+    <div class="inv-box">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <div style="font-size:1.15rem;font-weight:700;color:#1a5276;letter-spacing:.3px">
+            MAVERICK INFRA AND ENGINEERS PVT. LTD.
+          </div>
+          <div style="font-size:.78rem;font-style:italic;color:#666">'Model • Innovate • Elevate'</div>
+          <div style="font-size:.78rem;color:#444">Pokhara-15, Kaski District, Gandaki Province, Nepal</div>
+          <div style="font-size:.78rem;font-weight:700;color:#1a5276">PAN: 622501XXX</div>
+        </div>
+        <div class="text-end">
+          <div style="font-size:1.8rem;font-weight:800;color:#1a5276;line-height:1.1">
+            TAX<br>INVOICE
+          </div>
+        </div>
+      </div>
+
+      <hr class="divider mb-3">
+
+      <!-- Bill To + Metadata -->
+      <div class="row mb-3">
+        <div class="col-6">
+          <div style="font-size:.78rem;font-weight:700;color:#1a5276">BILL TO:</div>
+          <div style="font-size:.88rem;font-weight:700;color:#1a5276">{{ invoice.client.name }}</div>
+          {% if invoice.client.address %}
+          <div style="font-size:.78rem">{{ invoice.client.address }}</div>{% endif %}
+          {% if invoice.client.phone %}
+          <div style="font-size:.78rem">Phone: {{ invoice.client.phone }}</div>{% endif %}
+          {% if invoice.client.email %}
+          <div style="font-size:.78rem">Email: {{ invoice.client.email }}</div>{% endif %}
+          {% if invoice.client.pan %}
+          <div style="font-size:.78rem;font-weight:700;color:#1a5276">PAN: {{ invoice.client.pan }}</div>{% endif %}
+        </div>
+        <div class="col-6">
+          {% set meta = [
+            ('Tax Invoice No.', invoice.invoice_no),
+            ('Issue Date', invoice.issue_date.strftime('%Y-%m-%d')),
+            ('Due Date', invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else '—'),
+            ('Payment Mode', invoice.payment_mode),
+            ('Reference', invoice.reference or '—'),
+          ] %}
+          <table style="font-size:.78rem;width:100%">
+            {% for label, val in meta %}
+            <tr>
+              <td style="color:#1a5276;padding:2px 0;width:55%">{{ label }}</td>
+              <td style="color:#555">:&nbsp;&nbsp;{{ val }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+
+      <!-- Items table -->
+      <table class="table table-bordered table-sm mb-0" style="font-size:.82rem">
+        <thead>
+          <tr>
+            <th>S.NO.</th><th>HS CODE</th><th>DESCRIPTION</th>
+            <th class="text-center">QTY</th><th>UNIT</th>
+            <th class="text-end">RATE</th><th class="text-end">AMOUNT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in invoice.items %}
+          <tr>
+            <td class="text-center">{{ item.sno }}</td>
+            <td class="text-center">{{ item.hs_code }}</td>
+            <td>{{ item.description }}</td>
+            <td class="text-end">{{ item.qty }}</td>
+            <td>{{ item.unit }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(item.rate) }}</td>
+            <td class="text-end">{{ "{:,.2f}".format(item.amount) }}</td>
+          </tr>
+          {% endfor %}
+          <!-- blank padding rows if items < 5 -->
+          {% for _ in range([5 - invoice.items|length, 0]|max) %}
+          <tr><td colspan="7" style="height:22px"></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Totals -->
+      <table class="table table-bordered table-sm mb-0" style="font-size:.82rem">
+        <tr>
+          <td rowspan="3" style="width:55%;font-size:.78rem;vertical-align:top;padding:8px">
+            <strong>IN WORDS:</strong><br>
+            <span style="color:#333">{{ in_words }}</span>
+          </td>
+          <td style="text-align:right;color:#1a5276;font-weight:600">SUBTOTAL :</td>
+          <td style="text-align:right;width:110px">{{ "{:,.2f}".format(invoice.subtotal) }}</td>
+        </tr>
+        <tr>
+          <td style="text-align:right;color:#555">13% VAT :</td>
+          <td style="text-align:right">{{ "{:,.2f}".format(invoice.vat) }}</td>
+        </tr>
+        <tr>
+          <td style="text-align:right;background:#1a5276;color:#fff;font-weight:700">
+            TOTAL AMOUNT :&nbsp;&nbsp;NPR
+          </td>
+          <td style="text-align:right;background:#1a5276;color:#fff;font-weight:700">
+            {{ "{:,.2f}".format(invoice.total) }}
+          </td>
+        </tr>
+        <tr>
+          <td colspan="3" style="text-align:right;font-size:.72rem;color:#888;font-style:italic">
+            (E. &amp; E. O.)
+          </td>
+        </tr>
+      </table>
+
+      <!-- Bank + Signature -->
+      <div class="row mt-2" style="font-size:.78rem">
+        <div class="col-6">
+          <table class="table table-bordered table-sm mb-0">
+            <tr><th colspan="2" style="background:#d6eaf8;color:#1a5276">BANK DETAILS</th></tr>
+            <tr><td style="background:#d6eaf8;color:#1a5276;font-weight:600">Account Name:</td>
+                <td>MAVERICK INFRA AND ENGINEERS PVT. LTD.</td></tr>
+            <tr><td style="background:#d6eaf8;color:#1a5276;font-weight:600">Bank Name:</td>
+                <td>Machhapuchhre Bank Ltd.</td></tr>
+            <tr><td style="background:#d6eaf8;color:#1a5276;font-weight:600">Branch:</td>
+                <td>Nayabazar, Pokhara</td></tr>
+            <tr><td style="background:#d6eaf8;color:#1a5276;font-weight:600">Account No.:</td>
+                <td>00109943171XXXXX</td></tr>
+          </table>
+          {% if invoice.notes %}
+          <div class="mt-2 p-2 border rounded" style="font-size:.75rem;color:#555">
+            <strong>Remarks:</strong> {{ invoice.notes }}
+          </div>{% endif %}
+        </div>
+        <div class="col-6 text-center d-flex flex-column justify-content-between">
+          <div style="font-size:.75rem;color:#555;font-style:italic">
+            Certified that the particulars given above are true and correct.<br>
+            <strong style="color:#1a5276">FOR MAVERICK INFRA AND ENGINEERS PVT. LTD.</strong>
+          </div>
+          <div>
+            <div style="font-size:.78rem;color:#bbb;font-style:italic">
+              This is a computer generated invoice,<br>no signature required.
+            </div>
+            <div style="color:#1a5276;font-size:.75rem;margin-top:6px">Authorized Signatory</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <hr class="mt-3 mb-2" style="border-color:#1a5276">
+      <div class="d-flex justify-content-between" style="font-size:.72rem;color:#888">
+        <span>
+          MAVERICK INFRA AND ENGINEERS PVT. LTD. &nbsp;|&nbsp;
+          Pokhara-15, Kaski District, Gandaki Province, Nepal &nbsp;|&nbsp;
+          (977) 98028 58556, 98028 23544 &nbsp;|&nbsp; www.maverickinfra.com.np
+        </span>
+        <span>✉ accounts@maverickinfra.com.np</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right panel: status + payments -->
+  <div class="col-lg-4">
+
+    <!-- Status card -->
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-info-circle me-2"></i>Status</div>
+      <div class="card-body text-center">
+        <div class="mb-2">
+          <span class="badge-status badge-{{ invoice.status }}" style="font-size:.9rem;padding:6px 18px">
+            {{ invoice.status.title() }}
+          </span>
+        </div>
+        <div class="row g-2 mt-1 text-start" style="font-size:.82rem">
+          <div class="col-6 text-muted">Total</div>
+          <div class="col-6 text-end fw-semibold">NPR {{ "{:,.2f}".format(invoice.total) }}</div>
+          <div class="col-6 text-muted">Paid</div>
+          <div class="col-6 text-end text-success fw-semibold">NPR {{ "{:,.2f}".format(invoice.amount_paid) }}</div>
+          <div class="col-6 text-muted">Balance Due</div>
+          <div class="col-6 text-end {{ 'text-danger fw-bold' if invoice.balance_due > 0 else 'text-success' }}">
+            NPR {{ "{:,.2f}".format(invoice.balance_due) }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Record payment -->
+    {% if invoice.balance_due > 0 %}
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-cash me-2"></i>Record Payment</div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('invoices.add_payment', id=invoice.id) }}">
+          <div class="mb-2">
+            <label class="form-label">Amount (NPR)</label>
+            <input type="number" name="amount" class="form-control form-control-sm"
+                   step="0.01" min="0.01" max="{{ invoice.balance_due }}"
+                   placeholder="{{ '{:,.2f}'.format(invoice.balance_due) }}" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control form-control-sm"
+                   value="{{ today }}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Method</label>
+            <select name="method" class="form-select form-select-sm">
+              <option value="">— Select —</option>
+              {% for m in ['Bank Transfer', 'Cash', 'Cheque', 'Online'] %}
+              <option>{{ m }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional">
+          </div>
+          <button type="submit" class="btn btn-teal btn-sm w-100">
+            <i class="bi bi-check-lg me-1"></i>Record Payment
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Payment history -->
+    {% if invoice.payments %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-2"></i>Payment History</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.8rem">
+          <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th></th></tr></thead>
+          <tbody>
+            {% for p in invoice.payments %}
+            <tr>
+              <td>{{ p.date.strftime('%Y-%m-%d') }}</td>
+              <td class="text-success fw-semibold">{{ "{:,.2f}".format(p.amount) }}</td>
+              <td>{{ p.method or '—' }}</td>
+              <td>
+                <form method="POST"
+                      action="{{ url_for('invoices.delete_payment', id=invoice.id, pid=p.id) }}"
+                      onsubmit="return confirm('Remove this payment?')">
+                  <button class="btn btn-sm btn-outline-danger py-0" style="font-size:.7rem">×</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // expose today for the payment date default
+  const today = "{{ today }}";
+  document.querySelector('input[name="date"]') && (document.querySelector('input[name="date"]').value = today);
+</script>
+{% endblock %}

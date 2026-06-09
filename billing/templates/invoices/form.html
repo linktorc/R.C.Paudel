@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if invoice else 'New' }} Invoice{% endblock %}
+{% block page_title %}{{ 'Edit Invoice — ' + invoice.invoice_no if invoice else 'New Invoice' }}{% endblock %}
+
+{% block content %}
+<form method="POST" id="invoice-form">
+
+  <div class="row g-3 mb-3">
+    <!-- Left: Invoice meta -->
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-card-text me-2"></i>Invoice Details</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Invoice No. *</label>
+              <input type="text" name="invoice_no" class="form-control"
+                     value="{{ invoice.invoice_no if invoice else inv_no }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Client *</label>
+              <select name="client_id" class="form-select" required>
+                <option value="">— Select Client —</option>
+                {% for c in clients %}
+                <option value="{{ c.id }}"
+                  {{ 'selected' if invoice and invoice.client_id == c.id else '' }}>
+                  {{ c.name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Issue Date *</label>
+              <input type="date" name="issue_date" class="form-control"
+                     value="{{ invoice.issue_date.strftime('%Y-%m-%d') if invoice else today.strftime('%Y-%m-%d') }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Due Date</label>
+              <input type="date" name="due_date" class="form-control"
+                     value="{{ invoice.due_date.strftime('%Y-%m-%d') if invoice and invoice.due_date else '' }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Payment Mode</label>
+              <select name="payment_mode" class="form-select">
+                {% for m in ['Bank Account', 'Cash', 'Cheque', 'Online Transfer', 'Other'] %}
+                <option {{ 'selected' if (invoice and invoice.payment_mode == m) or (not invoice and m == 'Bank Account') else '' }}>
+                  {{ m }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Reference</label>
+              <input type="text" name="reference" class="form-control"
+                     value="{{ invoice.reference if invoice else '' }}" placeholder="Optional ref.">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Remarks / Notes</label>
+              <textarea name="notes" class="form-control" rows="2">{{ invoice.notes if invoice else '' }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Live totals -->
+    <div class="col-lg-5">
+      <div class="card h-100">
+        <div class="card-header"><i class="bi bi-calculator me-2"></i>Live Totals</div>
+        <div class="card-body d-flex flex-column justify-content-center">
+          <table class="table table-sm mb-0">
+            <tr>
+              <td class="text-muted">Subtotal</td>
+              <td class="text-end fw-semibold" id="preview-subtotal">0.00</td>
+            </tr>
+            <tr>
+              <td class="text-muted">13% VAT</td>
+              <td class="text-end text-muted" id="preview-vat">0.00</td>
+            </tr>
+            <tr style="border-top:2px solid #1a5276">
+              <td class="fw-bold" style="color:#1a5276">TOTAL (NPR)</td>
+              <td class="text-end fw-bold fs-5" style="color:#1a5276" id="preview-total">0.00</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Items table -->
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-list-ul me-2"></i>Line Items</span>
+      <button type="button" id="add-row-btn" class="btn btn-sm btn-outline-light">
+        <i class="bi bi-plus-lg me-1"></i>Add Row
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0" id="items-table">
+          <thead>
+            <tr>
+              <th style="width:40px">#</th>
+              <th style="width:110px">HS Code</th>
+              <th>Description</th>
+              <th style="width:90px">Qty</th>
+              <th style="width:80px">Unit</th>
+              <th style="width:120px">Rate (NPR)</th>
+              <th style="width:120px">Amount (NPR)</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-teal">
+      <i class="bi bi-check-lg me-1"></i>{{ 'Update' if invoice else 'Create' }} Invoice
+    </button>
+    <a href="{{ url_for('invoices.list_invoices') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+{% if invoice %}
+<script>
+window.EXISTING_ITEMS = [
+  {% for item in invoice.items %}
+  { hs_code: {{ item.hs_code|tojson }}, description: {{ item.description|tojson }},
+    qty: {{ item.qty }}, unit: {{ item.unit|tojson }}, rate: {{ item.rate }} }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+</script>
+{% endif %}
+<script src="{{ url_for('static', filename='js/invoice.js') }}"></script>
+{% endblock %}

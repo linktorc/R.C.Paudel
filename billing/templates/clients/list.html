@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Clients{% endblock %}
+{% block page_title %}Clients{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('clients.create') }}" class="btn btn-teal btn-sm">
+  <i class="bi bi-plus-lg me-1"></i>Add Client
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-people-fill me-2"></i>All Clients ({{ clients|length }})</span>
+    <form class="d-flex gap-2" method="GET">
+      <input type="text" name="q" class="form-control form-control-sm" placeholder="Search name…" value="{{ q }}">
+      <button class="btn btn-sm btn-light">Go</button>
+    </form>
+  </div>
+  <div class="card-body p-0">
+    {% if clients %}
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr><th>#</th><th>Name</th><th>Phone</th><th>Email</th><th>PAN</th><th>Invoices</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for c in clients %}
+        <tr>
+          <td class="text-muted">{{ loop.index }}</td>
+          <td><span class="fw-semibold text-teal">{{ c.name }}</span>
+            {% if c.address %}<br><small class="text-muted">{{ c.address }}</small>{% endif %}
+          </td>
+          <td>{{ c.phone or '—' }}</td>
+          <td>{{ c.email or '—' }}</td>
+          <td>{{ c.pan or '—' }}</td>
+          <td>{{ c.invoices|length }}</td>
+          <td class="text-end">
+            <a href="{{ url_for('clients.edit', id=c.id) }}" class="btn btn-sm btn-outline-secondary py-0 me-1" style="font-size:.75rem">Edit</a>
+            <form method="POST" action="{{ url_for('clients.delete', id=c.id) }}" class="d-inline"
+                  onsubmit="return confirm('Delete {{ c.name }}?')">
+              <button class="btn btn-sm btn-outline-danger py-0" style="font-size:.75rem">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-people fs-1 d-block mb-2"></i>No clients found.
+      <a href="{{ url_for('clients.create') }}" class="btn btn-teal btn-sm mt-2">Add First Client</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
